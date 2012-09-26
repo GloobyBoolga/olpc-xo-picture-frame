@@ -1,0 +1,54 @@
+---------------------------------------------------------------------
+2012-09-26 02:30  New picasaweb support
+
+picasaweb.py assumes that gdata-2.0.17 (or similar)
+ Google Data API python library is accessible.
+E.g.
+  export PYTHONPATH=.:~+/gdata-2.0.17/src
+
+---------------------------------------------------------------------
+20090830: Turn the OLPC XO into a wifi enabled Picture Frame
+
+Turning the XO into a picture frame that uses the network to get a copy of the pictures to display.
+
+* The following features are wanted
+  1. Be able to easily update the pictures over the net.
+    Be able to use a source like Picasa, PicasaWeb, iPhoto,...
+    Not more complicated than an "Export into a folder".
+  2. Allow working without a web connection.
+    If the net goes down, it still must display the pictures (implies some form of caching).
+  3. Have simple controls on the frame itself.
+    next/prev/pause, re-grab, ...
+  4. Allow source of pics to control slideshow params.
+    Works by dropping a config file within the export-folder.
+  5. slideshow should start automatically at boot up.
+
+* Implementation Notes
+  - Not using Picasa. It would have allowed grabbing albums from picasaweb, but does not work OOB.
+     . missing libs
+        2009-08-30 http://dl.google.com/linux/rpm/testing/i386/picasa-3.0-current.i386.rpm would fail to install due to missing libs.
+     . no working album download feature
+        http://dl.google.com/linux/rpm/stable/i386/picasa-2.7.3736-15.i386.rpm does not have importing from picasaweb built-in
+        and the firefox activity does not recognize the installed picasa, so downloading web albums does not work.
+
+  - Using feh (http://linuxbrit.co.uk/feh/), a command-line picture viewer
+    yum install feh
+
+  - Start up a webserver on the machine that holds the pictures
+    . On my MacMini
+      Enable the webserver for my main user.
+      The export folder for picasa now lives under /Users/jpa/sites/pics/...
+
+  - Other changes
+    . Re-use the "WIFI connection" script from this notebook
+      Modified to retry getting the connection after it has gone away using something similar to crystal2464.wifi.sh
+      Call the modified wifi connection script and background it from /etc/rc.local
+    . Create a "slideshow" script that
+      wget's the slideshow.config + pics/* from the image server
+      starts up feh with the wanted slideshow delay in the background
+      monitors the image server for changes
+
+     . Launch the slideshow script from /home/olpc/.xsession
+       ( echo "Let the olpc display manager start up" ; sleep 60; exec /home/olpc/slideshow ) &
+
+---------------------------------------------------------------------
