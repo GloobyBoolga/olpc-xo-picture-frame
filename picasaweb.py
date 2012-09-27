@@ -6,7 +6,7 @@ See:
   https://developers.google.com/picasa-web/docs/1.0/developers_guide_python#PhotosInfo
   https://developers.google.com/picasa-web/docs/2.0/reference
 """
-  
+
 import gdata.photos
 import gdata.photos.service
 import os
@@ -14,11 +14,18 @@ import sys
 import urllib
 
 class PicasaWebAlbum(object):
-  # recentTime = time.mktime(time.strptime('2012-07-01 00:00:00', '%Y-%m-%d %H:%M:%S'))
+  """Class to work on the picasa web via the Google Data API.
 
+  The app_password should be regenerated. It really belongs in a
+  config file.
+  """
+
+  # max_size is one of:
   # 94, 110, 128, 200, 220, 288, 320, 400, 512, 576, 640, 720, 800, 912, 1024, 1152, 1280, 1440, 1600
   max_size = 96
   username = 'abgrall.jp'
+  # TODO(jpa): Put password in ~/.picasaweb.cfg.
+  # In any case, regenerate this passord.
   app_password = 'yvgncfdgxlccvogl'
   photo_limit = 500
 
