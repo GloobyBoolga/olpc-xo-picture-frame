@@ -7,6 +7,7 @@ See:
   https://developers.google.com/picasa-web/docs/2.0/reference
 """
 
+import argparse
 import gdata.photos
 import gdata.photos.service
 import netrc
@@ -60,7 +61,7 @@ class PicasaWebAlbum(object):
     Uses:
       - album_name, out_dir, photo_limit
     """
-    print 'fetching <', self.album_name, '> into ', self.out_dir
+    print 'fetching at most', self.photo_limit, 'photos from <' + self.album_name + '> into', self.out_dir
     pws = gdata.photos.service.PhotosService()
     pws.ClientLogin(self.login, self.password)
     #Get all albums
@@ -77,25 +78,17 @@ class PicasaWebAlbum(object):
         urllib.urlretrieve(photo.content.src, os.path.join(self.out_dir, photo.title.text))
 
 def main(argv):
-  if argv:
-    album_name = argv.pop(0)
-  if argv:
-    out_dir = argv.pop(0)
-  if argv:
-    photo_limit = int(argv.pop(0))
-    if photo_limit < 1:
-      raise UserWarning('photo_limit ' + str(photo_limit) + ' should be >= 1.')
+  parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+  parser.add_argument('--album_name', default='MMG and JPA Wedding 2012-08-18', help='The name of the album to fetch')
+  parser.add_argument('--out_dir', default='./pics', help='The directory to put photos into')
+  parser.add_argument('--photo_limit', default=5, type=int, help='Must be >= 1')
+  args = parser.parse_args(argv)
+  if args.photo_limit < 1:
+    raise UserWarning('photo_limit ' + str(args.photo_limit) + ' should be >= 1.')
 
-  if not album_name:
-    album_name = 'MMG and JPA Wedding 2012-08-18'
-  if not out_dir:
-    out_dir = './pics'
-  if not photo_limit:
-    photo_limit = 5
-
-  p = PicasaWebAlbum(album_name, out_dir)
+  p = PicasaWebAlbum(args.album_name, args.out_dir)
   p.loadConfig();
-  p.photo_limit = photo_limit
+  p.photo_limit = args.photo_limit
   p.prepOutDir()
   p.fetch()
 
