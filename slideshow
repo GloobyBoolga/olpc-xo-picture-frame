@@ -5,54 +5,69 @@
 #
 
 pic_delay=${1:-3600}
-reload_delay=${1:-300}
+reload_delay=${2:-300}
 download_dir=/home/olpc/FramePics
-pic_dir='~jpa/pics'
-pics_url=http://abyo/~jpa/pics
-
 view_cmd="feh --recursive --hide-pointer --full-screen --auto-zoom"
+pic_count=0
+fehpid=
+
+picture_frame_sw_dir=/home/olpc/olpc-xo-picture-frame
+picasaweb_album_name=
+picasaweb_album_info="2012-08 Some random album; ls -a"
+picasaweb_cmd="$picture_frame_sw_dir/picasaweb.py"
+export PYTHONPATH=$picture_frame_sw_dir/gdata-2.0.17/src
 
 function GetConfig() {
+  # TODO(jpa): extract slideshow.config from album description/comments.
   local cfg=${1:-$download_dir}/slideshow.config
   if [ -e $cfg ]; then
     eval $(egrep '^(reload_delay|pic_delay)=[0-9]+$' $cfg)
   fi
 }
 
+function FetchPictures() {
+  local fetch_res
+  local out_dir=$download_dir.new
+  rm -rf $out_dir
+  mkdir -p $out_dir
+
+  wget -q --tries=1 --timeout=5 --directory-prefix=$out_dir \
+    --no-host-directories \
+    http://User:@192.168.1.10/IMAGE.JPG
+
+  gst-launch v4l2src num-buffers=1 ! ffmpegcolorspace ! jpegenc ! filesink location=$out_dir/LOCALCAM.JPG
+
+  $picasaweb_cmd --out_dir=$out_dir ${picasaweb_album_name:+--album_name=$picasaweb_album_name}
+  fetch_res=$?
+
+  pic_count=$(find $out_dir -type f ! -name slideshow.config | wc -l)
+  echo "picasaweb.py: res=$fetch_res files=$pic_count"
+
+  return $fetch_res
+}
 
 # Disable power management's energystar features.
 xset -dpms
 
 GetConfig
-$view_cmd -D$pic_delay $download_dir&
-fehpid=$!
-trap "echo killing fehpid=$fehpid ; kill $fehpid" EXIT
+
+fehpid=
+restart_feh=1
 
 while true; do
   date
-  restart_feh=0
 
-  rm -rf $download_dir.new
-  mkdir -p $download_dir.new
-  cd $download_dir.new
+  FetchPictures
+  fetch_res=$?
 
-  wget -q --tries=1 --timeout=5 --directory-prefix=. \
-    --no-host-directories \
-    http://User:@192.168.1.10/IMAGE.JPG \
-    $pics_url/slideshow.config
-  wget -q --tries=1 --timeout=10 --no-parent --recursive \
-    --accept=jpg,JPG,jpeg,JPG --directory-prefix=. \
-    --no-host-directories \
-    $pics_url 
-  wget_res=$?
-  pic_count=$(find . -type f ! -name slideshow.config | wc -l)
-  echo "wget: res=$? files=$pic_count"
-  cd ..
-
-  diff --exclude=IMAGE.JPG --exclude=slideshow.config -r $download_dir.new $download_dir 
+  set +e
+  diff -s --exclude=LOCALCAM.JPG --exclude=IMAGE.JPG --exclude=slideshow.config -r $download_dir.new $download_dir 
   diff_res=$?
-  if [ $wget_res -eq 0 -a $pic_count -ge 2 -a $diff_res -ne 0 ]; then 
-    mv $download_dir $download_dir.todelete
+  set -e
+
+  if [ $fetch_res -eq 0 -a $pic_count -ge 2 -a $diff_res -ne 0 ]; then
+    # Maybe the dir doesn't exist on 1st run.
+    [ -d $download_dir ] && mv $download_dir $download_dir.todelete 
     mv $download_dir.new $download_dir
     restart_feh=1
   else
@@ -61,14 +76,13 @@ while true; do
   rm -rf $download_dir.todelete
 
   if [ $restart_feh -ne 0 ]; then 
-    kill $fehpid
+    [ -n "$fehpid" ] && kill $fehpid
     GetConfig 
-    $view_cmd -D$pic_delay $download_dir&
+    $view_cmd --slideshow-delay=$pic_delay --info "echo '$picasaweb_album_info'" $download_dir&
     fehpid=$!
     trap "echo killing fehpid=$fehpid ; kill $fehpid" EXIT
     restart_feh=0
   fi
   # Delay could be pic_count based.
-  sleep $((reload_delay + 10 * pic_delay / 100 ))
+  sleep $((reload_delay + pic_count * pic_delay / 100 ))
 done
-

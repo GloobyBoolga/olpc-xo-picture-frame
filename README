@@ -1,3 +1,7 @@
+2012-09-29 21:13 Capture a image from the webcam
+
+gst-launch v4l2src num-buffers=1 ! ffmpegcolorspace ! jpegenc ! filesink location=test.jpg 
+
 ---------------------------------------------------------------------
 2012-09-26 02:30  New picasaweb support
 
@@ -46,10 +50,16 @@ Turning the XO into a picture frame that uses the network to get a copy of the p
       Modified to retry getting the connection after it has gone away using something similar to crystal2464.wifi.sh
       Call the modified wifi connection script and background it from /etc/rc.local
     . Create a "slideshow" script that
-      wget's the slideshow.config + pics/* from the image server
+      fetches the slideshow.config + pics/* from the image server
       starts up feh with the wanted slideshow delay in the background
       monitors the image server for changes
-
-     . Launch the slideshow script from /home/olpc/.xsession
+    . Launch the slideshow script from /home/olpc/.xsession
        ( echo "Let the olpc display manager start up" ; sleep 60; exec /home/olpc/slideshow ) &
+
+* Getting the files on the olpc
+  # jpa@jpa-hpdm4:22:43:31 ~/Devel/OlpcPictureFrame/olpc-xo-picture-frame $
+   rsync -ra --exclude=.git --exclude=pics ../olpc-xo-picture-frame olpc@192.168.1.102:.
+  The slideshow scripts currently assues that everything it needs lives under:
+    picture_frame_sw_dir=/home/olpc/olpc-xo-picture-frame
+
 ---------------------------------------------------------------------
