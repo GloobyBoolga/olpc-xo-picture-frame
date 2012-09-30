@@ -32,7 +32,9 @@ Turning the XO into a picture frame that uses the network to get a copy of the p
         and the firefox activity does not recognize the installed picasa, so downloading web albums does not work.
 
   - Using feh (http://linuxbrit.co.uk/feh/), a command-line picture viewer
-    yum install feh
+    . yum install feh
+    . sample commandline:
+      feh --info 'echo some title' --recursive --hide-pointer --full-screen --auto-zoom --preload --slideshow-delay=3 --reload=30 pics/
 
   - Start up a webserver on the machine that holds the pictures
     . On my MacMini
@@ -50,5 +52,4 @@ Turning the XO into a picture frame that uses the network to get a copy of the p
 
      . Launch the slideshow script from /home/olpc/.xsession
        ( echo "Let the olpc display manager start up" ; sleep 60; exec /home/olpc/slideshow ) &
-
 ---------------------------------------------------------------------
