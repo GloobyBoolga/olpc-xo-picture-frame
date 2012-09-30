@@ -5,17 +5,21 @@
 #
 
 pic_delay=${1:-3600}
-reload_delay=${2:-300}
+reload_delay=${2:-600}
+# Leave empty for default.
+picasaweb_album_name="${3:-OLPC XO PictureFrame2}"
+
 download_dir=/home/olpc/FramePics
 view_cmd="feh --recursive --hide-pointer --full-screen --auto-zoom"
 pic_count=0
 fehpid=
 
+# This is where the sw lives, a clone of the git repo would work just fine.
 picture_frame_sw_dir=/home/olpc/olpc-xo-picture-frame
-picasaweb_album_name=
-picasaweb_album_info="2012-08 Some random album; ls -a"
-picasaweb_cmd="$picture_frame_sw_dir/picasaweb.py"
 export PYTHONPATH=$picture_frame_sw_dir/gdata-2.0.17/src
+# TODO(jpa): extract info from album comment
+picasaweb_album_info="$picasaweb_album_name"
+picasaweb_cmd="$picture_frame_sw_dir/picasaweb.py --photo_limit=400 --imgmax_size=1200"
 
 function GetConfig() {
   # TODO(jpa): extract slideshow.config from album description/comments.
@@ -27,20 +31,20 @@ function GetConfig() {
 
 function FetchPictures() {
   local fetch_res
-  local out_dir=$download_dir.new
-  rm -rf $out_dir
-  mkdir -p $out_dir
+  local out_dir="$download_dir.new"
+  rm -rf "$out_dir"
+  mkdir -p "$out_dir"
 
-  wget -q --tries=1 --timeout=5 --directory-prefix=$out_dir \
+  wget -q --tries=1 --timeout=5 --directory-prefix="$out_dir" \
     --no-host-directories \
     http://User:@192.168.1.10/IMAGE.JPG
 
-  gst-launch v4l2src num-buffers=1 ! ffmpegcolorspace ! jpegenc ! filesink location=$out_dir/LOCALCAM.JPG
+  gst-launch v4l2src num-buffers=1 ! ffmpegcolorspace ! jpegenc ! filesink location="$out_dir/LOCALCAM.JPG"
 
-  $picasaweb_cmd --out_dir=$out_dir ${picasaweb_album_name:+--album_name=$picasaweb_album_name}
+  $picasaweb_cmd --out_dir="$out_dir" ${picasaweb_album_name:+--album_name="$picasaweb_album_name"}
   fetch_res=$?
 
-  pic_count=$(find $out_dir -type f ! -name slideshow.config | wc -l)
+  pic_count=$(find "$out_dir" -type f ! -name slideshow.config | wc -l)
   echo "picasaweb.py: res=$fetch_res files=$pic_count"
 
   return $fetch_res
@@ -61,24 +65,24 @@ while true; do
   fetch_res=$?
 
   set +e
-  diff -s --exclude=LOCALCAM.JPG --exclude=IMAGE.JPG --exclude=slideshow.config -r $download_dir.new $download_dir 
+  diff -s --exclude=LOCALCAM.JPG --exclude=IMAGE.JPG --exclude=slideshow.config -r "$download_dir.new" "$download_dir" 
   diff_res=$?
   set -e
 
-  if [ $fetch_res -eq 0 -a $pic_count -ge 2 -a $diff_res -ne 0 ]; then
+  if [ $fetch_res -eq 0 -a $pic_count -ge 3 -a $diff_res -ne 0 ]; then
     # Maybe the dir doesn't exist on 1st run.
-    [ -d $download_dir ] && mv $download_dir $download_dir.todelete 
-    mv $download_dir.new $download_dir
+    [ -d "$download_dir" ] && mv "$download_dir" "$download_dir.todelete"
+    mv "$download_dir.new" "$download_dir"
     restart_feh=1
   else
-    mv $download_dir.new $download_dir.todelete
+    mv "$download_dir.new" "$download_dir.todelete"
   fi
-  rm -rf $download_dir.todelete
+  rm -rf "$download_dir.todelete"
 
   if [ $restart_feh -ne 0 ]; then 
     [ -n "$fehpid" ] && kill $fehpid
     GetConfig 
-    $view_cmd --slideshow-delay=$pic_delay --info "echo '$picasaweb_album_info'" $download_dir&
+    $view_cmd --slideshow-delay=$pic_delay --info "echo '$picasaweb_album_info'" "$download_dir" &
     fehpid=$!
     trap "echo killing fehpid=$fehpid ; kill $fehpid" EXIT
     restart_feh=0

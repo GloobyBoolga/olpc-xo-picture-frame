@@ -25,8 +25,8 @@ class PicasaWebAlbum(object):
     self.album_name = album_name
     self.out_dir = out_dir
     # Set the size of the photos, max_size is one of:
-    # 94, 110, 128, 200, 220, 288, 320, 400, 512, 576, 640, 720, 800, 912, 1024, 1152, 1280, 1440, 1600
-    self.max_size = 1280
+    self.valid_imgmax_sizes = (94, 110, 128, 200, 220, 288, 320, 400, 512, 576, 640, 720, 800, 912, 1024, 1152, 1280, 1440, 1600)
+    self.imgmax_size = 1280
     # Maximum number of photos to look at.
     self.photo_limit = 500
     # Number of album titles to look at.
@@ -71,7 +71,7 @@ class PicasaWebAlbum(object):
       if album.title.text.find(self.album_name) < 0: continue
       print '* ', album.title.text, album.gphoto_id.text
       photos = pws.GetFeed('/data/feed/api/user/%s/albumid/%s?kind=photo&imgmax=%d' % (
-              self.login, album.gphoto_id.text, self.max_size),
+              self.login, album.gphoto_id.text, self.imgmax_size),
                            limit=self.photo_limit)
       for photo in photos.entry:
         print '  ', photo.title.text, photo.content.src
@@ -82,11 +82,16 @@ def main(argv):
   parser.add_argument('--album_name', default='MMG and JPA Wedding 2012-08-18', help='The name of the album to fetch')
   parser.add_argument('--out_dir', default='./pics', help='The directory to put photos into')
   parser.add_argument('--photo_limit', default=5, type=int, help='Must be >= 1')
+  parser.add_argument('--imgmax_size', default=666, type=int, help='Upper limit of the img size requested')
   args = parser.parse_args(argv)
   if args.photo_limit < 1:
     raise UserWarning('photo_limit ' + str(args.photo_limit) + ' should be >= 1.')
-
   p = PicasaWebAlbum(args.album_name, args.out_dir)
+  if args.imgmax_size not in p.valid_imgmax_sizes:
+    # Having a wrong size like 666 still seems to work ... for now?
+    print 'imgmax_size ' + str(args.imgmax_size) + ' not within ' + str(p.valid_imgmax_sizes)
+  p.imgmax_size = args.imgmax_size
+
   p.loadConfig();
   p.photo_limit = args.photo_limit
   p.prepOutDir()

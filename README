@@ -1,3 +1,25 @@
+---------------------------------------------------------------------
+2012-09-29 23:33 First clean version
+
+Usages
+
+slideshow 1 300 "2012-08-20_21 Altea, Spain"
+
+  would fetch the "2012-08-20_21 Altea, Spain"
+  delay 1 sec between pics
+  refetch album ever 300 sec.
+
+slideshow
+  would fetch the default "OLPC XO PictureFrame2" album
+  delay 1h between pictures
+  reload album every 10 minutes
+
+slideshow 10 "" "2012-08-20_21 Altea, Spain"
+  would fetch the "2012-08-20_21 Altea, Spain"
+  delay 10 sec between pics
+  refetch album ever 10 mintus
+
+---------------------------------------------------------------------
 2012-09-29 21:13 Capture a image from the webcam
 
 gst-launch v4l2src num-buffers=1 ! ffmpegcolorspace ! jpegenc ! filesink location=test.jpg 
