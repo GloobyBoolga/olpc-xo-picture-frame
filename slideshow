@@ -11,7 +11,8 @@ picasaweb_album_name="${3:-OLPC XO PictureFrame2}"
 
 download_dir=/home/olpc/FramePics
 view_cmd="feh --recursive --hide-pointer --full-screen --auto-zoom"
-pic_count=0
+fetch_pic_count=0
+fetch_res=1
 fehpid=
 
 # This is where the sw lives, a clone of the git repo would work just fine.
@@ -30,7 +31,6 @@ function GetConfig() {
 }
 
 function FetchPictures() {
-  local fetch_res
   local out_dir="$download_dir.new"
   rm -rf "$out_dir"
   mkdir -p "$out_dir"
@@ -44,49 +44,71 @@ function FetchPictures() {
   $picasaweb_cmd --out_dir="$out_dir" ${picasaweb_album_name:+--album_name="$picasaweb_album_name"}
   fetch_res=$?
 
-  pic_count=$(find "$out_dir" -type f ! -name slideshow.config | wc -l)
-  echo "picasaweb.py: res=$fetch_res files=$pic_count"
-
-  return $fetch_res
+  fetch_pic_count=$(find "$out_dir" -type f ! \( -name slideshow.config -o -name IMAGE.JPG -o -name LOCALCAM.JPG \) | wc -l)
+  echo "picasaweb.py: res=$fetch_res files=$fetch_pic_count"
 }
 
-# Disable power management's energystar features.
-xset -dpms
+function StartView() {
+  [ -n "$fehpid" ] && kill $fehpid
+  $view_cmd --slideshow-delay=$pic_delay --info "echo '$picasaweb_album_info'" "$download_dir" &
+  fehpid=$!
+  trap "echo killing fehpid=$fehpid ; kill $fehpid" EXIT
+}
 
-GetConfig
+function WaitForInitialFetch() {
+  [ -d "$download_dir" ] && return
+  while [ ! -d "$download_dir" ]; do
+    sleep 60
+    FetchPictures
+    UpdateFromNewDir
+  done
+}
 
-fehpid=
-restart_feh=1
+function UpdateFromNewDir() {
+  local diff_res
+  local got_new_dir=0
 
-while true; do
-  date
-
-  FetchPictures
-  fetch_res=$?
-
-  set +e
-  diff -s --exclude=LOCALCAM.JPG --exclude=IMAGE.JPG --exclude=slideshow.config -r "$download_dir.new" "$download_dir" 
+  diff -s --exclude=LOCALCAM.JPG --exclude=IMAGE.JPG --exclude=slideshow.config -r "$download_dir.new" "$download_dir"
   diff_res=$?
-  set -e
 
-  if [ $fetch_res -eq 0 -a $pic_count -ge 3 -a $diff_res -ne 0 ]; then
+  if [ $fetch_res -eq 0 -a $fetch_pic_count -ne 0 -a $diff_res -ne 0 ]; then
     # Maybe the dir doesn't exist on 1st run.
     [ -d "$download_dir" ] && mv "$download_dir" "$download_dir.todelete"
     mv "$download_dir.new" "$download_dir"
-    restart_feh=1
+    got_new_dir=1
   else
     mv "$download_dir.new" "$download_dir.todelete"
   fi
   rm -rf "$download_dir.todelete"
+  (( got_new_dir ))
+}
 
-  if [ $restart_feh -ne 0 ]; then 
-    [ -n "$fehpid" ] && kill $fehpid
-    GetConfig 
-    $view_cmd --slideshow-delay=$pic_delay --info "echo '$picasaweb_album_info'" "$download_dir" &
-    fehpid=$!
-    trap "echo killing fehpid=$fehpid ; kill $fehpid" EXIT
-    restart_feh=0
-  fi
-  # Delay could be pic_count based.
-  sleep $((reload_delay + pic_count * pic_delay / 100 ))
-done
+function MainLoop() {
+  local update_res
+
+  # Disable power management's energystar features.
+  xset -dpms
+
+  while true; do
+    date
+
+    FetchPictures
+    UpdateFromNewDir
+    update_res=$?
+
+    if [ $update_res -eq 0 ]; then
+      GetConfig
+      StartView
+    fi
+
+    # Delay could be pic_count based.
+    sleep $((reload_delay + pic_count * pic_delay / 100 ))
+  done
+
+}
+
+set -vx
+GetConfig
+WaitForInitialFetch
+StartView
+MainLoop
