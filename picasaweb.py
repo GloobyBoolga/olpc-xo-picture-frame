@@ -12,6 +12,7 @@ import gdata.photos
 import gdata.photos.service
 import netrc
 import os
+import re
 import sys
 import urllib
 
@@ -44,7 +45,7 @@ class PicasaWebAlbum(object):
       cfg = netrc.netrc()
       self.login, _, self.password = cfg.authenticators(self.netrc_machine)
     except (TypeError, IOError), e:
-      print 'Failed to get auth config from netrc file for:', self.netrc_machine
+      print 'Failed to get auth config from netrc file for:', self.netrc_machine, 'e=', e
       raise
     print self.login, self.password
 
@@ -54,6 +55,13 @@ class PicasaWebAlbum(object):
       os.mkdir(self.out_dir)
     elif os.path.exists(self.out_dir) and not os.path.isdir(self.out_dir):
       raise UserWarning("out dir(" + self.out_dir + ") path is not a dir")
+
+  def extractSlideshowInfo(self, album_description):
+    cfg_file = open(os.path.join(self.out_dir, 'slideshow.config'), 'w')
+    for var,val in re.findall('(?m)slideshow:(?P<varName>[^=]+)=(?P<varValue>.*$)', album_description):
+      print '%(var)s="%(val)s"' % { 'var': var, 'val': val }
+      print >> cfg_file,  '%(var)s="%(val)s"' % { 'var': var, 'val': val }
+    cfg_file.close()
 
   def fetch(self):
     """Fetches the selected album into the output directory.
@@ -69,7 +77,8 @@ class PicasaWebAlbum(object):
 
     for album in albums:
       if album.title.text.find(self.album_name) < 0: continue
-      print '* ', album.title.text, album.gphoto_id.text
+      print '* ', album.title.text, album.gphoto_id.text, album.media.description.text
+      self.extractSlideshowInfo(album.media.description.text)
       photos = pws.GetFeed('/data/feed/api/user/%s/albumid/%s?kind=photo&imgmax=%d' % (
               self.login, album.gphoto_id.text, self.imgmax_size),
                            limit=self.photo_limit)

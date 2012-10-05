@@ -8,25 +8,26 @@ pic_delay=${1:-3600}
 reload_delay=${2:-600}
 # Leave empty for default.
 picasaweb_album_name="${3:-OLPC XO PictureFrame2}"
+max_pics=${4:-400}
 
-download_dir=/home/olpc/FramePics
+download_dir=$HOME/FramePics
 view_cmd="feh --recursive --hide-pointer --full-screen --auto-zoom"
 fetch_pic_count=0
 fetch_res=1
 fehpid=
 
 # This is where the sw lives, a clone of the git repo would work just fine.
-picture_frame_sw_dir=/home/olpc/olpc-xo-picture-frame
+picture_frame_sw_dir=$(cd -P ${0%/*}; pwd)
 export PYTHONPATH=$picture_frame_sw_dir/gdata-2.0.17/src
-# TODO(jpa): extract info from album comment
-picasaweb_album_info="$picasaweb_album_name"
-picasaweb_cmd="$picture_frame_sw_dir/picasaweb.py --photo_limit=400 --imgmax_size=1200"
+# The following var is also extracted from album comment.
+album_info="$picasaweb_album_name"
+picasaweb_cmd="$picture_frame_sw_dir/picasaweb.py --imgmax_size=1200"
+
 
 function GetConfig() {
-  # TODO(jpa): extract slideshow.config from album description/comments.
   local cfg=${1:-$download_dir}/slideshow.config
   if [ -e $cfg ]; then
-    eval $(egrep '^(reload_delay|pic_delay)=[0-9]+$' $cfg)
+    eval $(egrep '^(reload_delay|pic_delay|album_info)=.*$' $cfg)
   fi
 }
 
@@ -41,22 +42,25 @@ function FetchPictures() {
 
   gst-launch v4l2src num-buffers=1 ! ffmpegcolorspace ! jpegenc ! filesink location="$out_dir/LOCALCAM.JPG"
 
-  $picasaweb_cmd --out_dir="$out_dir" ${picasaweb_album_name:+--album_name="$picasaweb_album_name"}
+  $picasaweb_cmd --photo_limit="$max_pics" --out_dir="$out_dir" ${picasaweb_album_name:+--album_name="$picasaweb_album_name"}
   fetch_res=$?
 
   fetch_pic_count=$(find "$out_dir" -type f ! \( -name slideshow.config -o -name IMAGE.JPG -o -name LOCALCAM.JPG \) | wc -l)
+  fetch_pic_count=$((fetch_pic_count))
   echo "picasaweb.py: res=$fetch_res files=$fetch_pic_count"
 }
 
 function StartView() {
   [ -n "$fehpid" ] && kill $fehpid
-  $view_cmd --slideshow-delay=$pic_delay --info "echo '$picasaweb_album_info'" "$download_dir" &
+  $view_cmd --slideshow-delay=$pic_delay --info "echo '$album_info'" "$download_dir" &
   fehpid=$!
   trap "echo killing fehpid=$fehpid ; kill $fehpid" EXIT
 }
 
 function WaitForInitialFetch() {
   [ -d "$download_dir" ] && return
+  FetchPictures
+  UpdateFromNewDir
   while [ ! -d "$download_dir" ]; do
     sleep 60
     FetchPictures
