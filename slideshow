@@ -72,7 +72,7 @@ function UpdateFromNewDir() {
   local diff_res
   local got_new_dir=0
 
-  diff -s --exclude=LOCALCAM.JPG --exclude=IMAGE.JPG --exclude=slideshow.config -r "$download_dir.new" "$download_dir"
+  diff -s --exclude=LOCALCAM.JPG --exclude=IMAGE.JPG -r "$download_dir.new" "$download_dir"
   diff_res=$?
 
   if [ $fetch_res -eq 0 -a $fetch_pic_count -ne 0 -a $diff_res -ne 0 ]; then
