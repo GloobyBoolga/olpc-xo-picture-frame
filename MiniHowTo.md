@@ -25,7 +25,7 @@ Assumes python 2.7
 ## Getting the script onto the XO and running
    * Upload the scripts and gdata subdirectory into `/home/olpc/olpc-xo-picture-frame` as the scripts assume `picture_frame_sw_dir=/home/olpc/olpc-xo-picture-frame`. I just rsync my git repo with
 
-      {{{ rsync -ra --exclude=.git --exclude=pics ../olpc-xo-picture-frame olpc@192.168.1.102:.}}}
+      `rsync -ra --exclude=.git --exclude=pics ../olpc-xo-picture-frame olpc@192.168.1.102:.`
 
    * Run the script.
       `/home/olpc/olpc-xo-picture-frame/slideshow "" "" "your album name"`<br>
