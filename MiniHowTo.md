@@ -5,7 +5,7 @@
 I had a broken OLPC XO (stuck keys) so I wanted to use it as a wifi-enabled picture frame.
 I tried out various things (via picasa,...) but ended up using feh + wget + !MacMini as a server.
 
-But now I use the [https://developers.google.com/picasa-web/docs/2.0/developers_guide Google Data API] to access my !PicasaWeb albums via [https://developers.google.com/picasa-web/docs/1.0/developers_guide_python python] instead of wget+custom server.
+But now I use the [Google Data API](https://developers.google.com/picasa-web/docs/2.0/developers_guide) to access my !PicasaWeb albums via [python](https://developers.google.com/picasa-web/docs/1.0/developers_guide_python) instead of wget+custom server.
 
 The following are quick-n-dirty instructions to get things going.
 
@@ -20,7 +20,7 @@ Assumes python 2.7
 
 `echo machine picasaweb login ` *you@gmail.com* `  password  ` *the_app_password_generated_above* ` > ~/.netrc`
 
-   * Prepare an album on picasaweb.google.com. The Default is _OLPC XO !PictureFrame2_.
+   * Prepare an album on picasaweb.google.com. The Default is _OLPC XO PictureFrame2_.
 
 ## Getting the script onto the XO and running
    * Upload the scripts and gdata subdirectory into `/home/olpc/olpc-xo-picture-frame` as the scripts assume `picture_frame_sw_dir=/home/olpc/olpc-xo-picture-frame`. I just rsync my git repo with
